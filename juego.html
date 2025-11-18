@@ -1,0 +1,223 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <title>¿Quieres jugar?</title>
+  <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;600;700&display=swap" rel="stylesheet">
+  <style>
+    :root{
+      --bg:#070608;
+      --card:#0f0f12;
+      --accent:#ef4444;
+      --accent-2:#b91c1c;
+      --muted:#bfc0c6;
+      --glass: rgba(255,255,255,0.03);
+      --text:#f3f4f6;
+    }
+    html,body{height:100%;}
+    body{
+      margin:0; font-family: 'Poppins', system-ui, -apple-system, 'Segoe UI', Roboto, Arial;
+      background: linear-gradient(180deg, #050506 0%, #0b0b0d 60%);
+      color:var(--text);
+      display:flex; align-items:center; justify-content:center; padding:20px;
+    }
+
+    .card{
+      width:100%; max-width:520px; background:linear-gradient(180deg, rgba(255,255,255,0.02), rgba(255,255,255,0.01));
+      border-radius:16px; padding:34px; box-shadow: 0 20px 60px rgba(0,0,0,0.75);
+      text-align:center; border:1px solid var(--glass); backdrop-filter: blur(6px);
+    }
+
+    .top {display:flex; align-items:center; justify-content:center; gap:12px; margin-bottom:6px}
+    .dot{width:10px;height:10px;border-radius:50%; background:linear-gradient(180deg,var(--accent),var(--accent-2)); box-shadow:0 6px 18px rgba(233,30,70,0.18)}
+
+    h1{font-size:30px; margin:6px 0 6px; color:var(--accent); font-weight:700; letter-spacing:-0.6px}
+    p.lead{margin:0 0 18px; color:var(--muted); font-weight:500}
+
+    .btn-area{display:flex; align-items:center; justify-content:center; gap:18px; margin-top:6px}
+
+    .btn-wrap{display:flex; align-items:center; gap:12px}
+
+    button{
+      padding:12px 34px; font-weight:700; font-size:15px; border-radius:12px; border:none; cursor:pointer;
+      transition:transform .2s ease, box-shadow .2s ease, background .2s ease;
+      box-shadow:0 10px 30px rgba(0,0,0,0.6);
+      color:white; user-select:none;
+      min-width:120px;
+    }
+
+    #yes{background:linear-gradient(180deg,var(--accent),var(--accent-2));}
+    #yes:hover{transform:translateY(-4px); box-shadow:0 18px 40px rgba(233,30,70,0.22)}
+
+    /* NO initially sits to the right of YES, centered vertically */
+    #no{
+      background:linear-gradient(180deg,#0b0f1a,#071023);
+      color: #ffb4b4; border:1px solid rgba(255,255,255,0.04);
+      position:relative; z-index:2;
+    }
+    #no:hover{transform:scale(1.02)}
+
+    .msg{min-height:44px; margin-top:18px; display:flex; align-items:center; justify-content:center; font-weight:600}
+
+    /* subtle accent line below */
+    .divider{height:1px; width:70%; margin:18px auto 8px; background:linear-gradient(90deg, transparent, rgba(255,255,255,0.03), transparent)}
+
+    /* responsive */
+    @media (max-width:520px){
+      .card{padding:24px}
+      h1{font-size:24px}
+      button{padding:12px 24px; min-width:110px}
+    }
+    @media (max-width:420px){
+      .btn-area{flex-direction:column; gap:12px}
+      .btn-wrap{flex-direction:column}
+      button{width:100%; min-width:unset}
+    }
+  </style>
+</head>
+<body>
+  <div class="card">
+    <div class="top"><div class="dot"></div><div class="dot" style="opacity:0.8"></div><div class="dot" style="opacity:0.6"></div></div>
+    <h1>¿Quieres jugar?</h1>
+    <p class="lead">Selecciona una opción</p>
+
+    <div class="btn-area" id="area">
+      <div class="btn-wrap">
+        <button id="yes" aria-label="Sí">SÍ</button>
+        <button id="no" aria-label="No" tabindex="-1">NO</button>
+      </div>
+    </div>
+
+    <div class="divider"></div>
+    <div class="msg" id="msg"></div>
+  </div>
+
+  <canvas id="fireworks-canvas" style="position:fixed;left:0;top:0;width:100%;height:100%;pointer-events:none;z-index:9999;display:none"></canvas>
+
+  <script>
+    const yes = document.getElementById('yes');
+    const no = document.getElementById('no');
+    const area = document.getElementById('area');
+    const msg = document.getElementById('msg');
+
+    // Remember original position (inline) — we'll move NO temporarily when user approaches
+    let restoreTimer = null;
+
+    function randomOffset(radius){
+      const angle = Math.random() * Math.PI * 2;
+      const r = Math.random() * radius;
+      return {x: Math.round(Math.cos(angle) * r), y: Math.round(Math.sin(angle) * r)};
+    }
+
+    function dodgeNo(){
+      const radius = Math.max(70, Math.min(160, window.innerWidth * 0.12));
+      const off = randomOffset(radius);
+      no.style.transition = 'transform .28s cubic-bezier(.2,.8,.2,1)';
+      no.style.transform = `translate(${off.x}px, ${off.y}px)`;
+
+      clearTimeout(restoreTimer);
+      restoreTimer = setTimeout(()=>{
+        no.style.transition = 'transform .5s cubic-bezier(.2,.8,.2,1)';
+        no.style.transform = 'translate(0,0)';
+      }, 1200);
+    }
+
+    no.addEventListener('mouseenter', (e)=>{ dodgeNo(); });
+    no.addEventListener('touchstart', (e)=>{ e.preventDefault(); dodgeNo(); }, {passive:false});
+    no.addEventListener('focus', (e)=>{ dodgeNo(); });
+
+    no.addEventListener('click', function(e){ e.preventDefault(); dodgeNo(); flashMessage('Intenta con SÍ 😄', true); });
+    no.addEventListener('keydown', function(e){ e.preventDefault(); dodgeNo(); flashMessage('Intenta con SÍ 😄', true); });
+
+    // Fireworks canvas setup
+    const canvas = document.getElementById('fireworks-canvas');
+    const ctx = canvas.getContext('2d');
+    let particles = [];
+    let animId = null;
+
+    function resizeCanvas(){
+      canvas.width = window.innerWidth;
+      canvas.height = window.innerHeight;
+    }
+    window.addEventListener('resize', resizeCanvas);
+    resizeCanvas();
+
+    function createParticles(x, y, color){
+      const count = 40 + Math.floor(Math.random()*30);
+      for(let i=0;i<count;i++){
+        const angle = Math.random() * Math.PI * 2;
+        const speed = Math.random() * 6 + 2;
+        particles.push({
+          x, y,
+          vx: Math.cos(angle) * speed,
+          vy: Math.sin(angle) * speed,
+          life: 60 + Math.random()*40,
+          age: 0,
+          size: 2 + Math.random()*3,
+          color
+        });
+      }
+    }
+
+    function draw(){
+      ctx.clearRect(0,0,canvas.width,canvas.height);
+      for(let i=particles.length-1;i>=0;i--){
+        const p = particles[i];
+        p.vy += 0.06; // gravity
+        p.vx *= 0.99; p.vy *= 0.99; // drag
+        p.x += p.vx; p.y += p.vy; p.age++;
+        const alpha = Math.max(0, 1 - p.age / p.life);
+        ctx.globalAlpha = alpha;
+        ctx.fillStyle = p.color;
+        ctx.beginPath();
+        ctx.arc(p.x, p.y, p.size, 0, Math.PI*2);
+        ctx.fill();
+        if(p.age >= p.life) particles.splice(i,1);
+      }
+      ctx.globalAlpha = 1;
+      if(particles.length>0){ animId = requestAnimationFrame(draw); }
+      else { cancelAnimationFrame(animId); animId = null; canvas.style.display = 'none'; }
+    }
+
+    function launchFireworks(){
+      const colors = ['#ff7b7b','#ffd166','#ffb4b4','#ff7aa2','#ffff7b','#bbf7d0'];
+      canvas.style.display = 'block';
+      // create several bursts
+      for(let i=0;i<6;i++){
+        setTimeout(()=>{
+          const x = window.innerWidth * (0.2 + Math.random()*0.6);
+          const y = window.innerHeight * (0.2 + Math.random()*0.4);
+          const col = colors[Math.floor(Math.random()*colors.length)];
+          createParticles(x,y,col);
+          if(!animId) draw();
+        }, i*220);
+      }
+    }
+
+    yes.addEventListener('click', function(){
+      flashMessage('✓ ¡Perfecto! Empezamos a jugar 🎮', false);
+      yes.disabled = true;
+      yes.style.opacity = '0.95';
+      no.style.pointerEvents = 'none';
+      clearTimeout(restoreTimer);
+      no.style.transition = 'transform .6s ease, opacity .4s ease';
+      no.style.transform = 'translate(90px, 0)';
+      no.style.opacity = '0.35';
+      // launch fireworks
+      launchFireworks();
+    });
+
+    function flashMessage(text, warn){
+      msg.textContent = text;
+      msg.style.color = warn ? '#fecaca' : '#bbf7d0';
+      msg.style.opacity = '1';
+      clearTimeout(flashMessage._t);
+      flashMessage._t = setTimeout(()=>{ msg.style.opacity = '0'; msg.textContent = '' }, 3200);
+    }
+
+    // Make sure NO stays near YES after resize
+    window.addEventListener('resize', ()=>{ no.style.transform = 'translate(0,0)'; });
+  </script>
+</body>
+</html>
